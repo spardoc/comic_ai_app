@@ -1,0 +1,21 @@
+# Ignorar el entorno virtual
+comic-ai-env/
+
+# Ignorar archivos de configuración sensibles
+.env
+
+# Archivos de caché y configuraciones de Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs y datos temporales
+*.log
+*.sqlite3
+
+# Archivos de dependencias
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Ignorar imágenes generadas
+/static/*.png
