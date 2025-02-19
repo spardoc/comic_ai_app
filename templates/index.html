@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Cómics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Generador de Cómics</h1>
+            <p>Crea una historia en estilo cómic con 7 escenas relacionadas.</p>
+        </header>
+        <main>
+            <form id="generate-form">
+                <div class="form-group">
+                    <label for="story">Cuenta tu historia:</label>
+                    <textarea id="story" name="story" placeholder="Describe tu historia completa aquí..." required></textarea>
+                </div>
+                <button type="submit">
+                    <span>Generar Cómic</span>
+                    <div class="loader" id="loader"></div>
+                </button>
+            </form>
+            <div id="result">
+                <div class="comic-strip">
+                    <!-- Aquí se mostrarán las 7 imágenes generadas -->
+                    <div class="comic-panel" id="panel1"></div>
+                    <div class="comic-panel" id="panel2"></div>
+                    <div class="comic-panel" id="panel3"></div>
+                    <div class="comic-panel" id="panel4"></div>
+                    <div class="comic-panel" id="panel5"></div>
+                    <div class="comic-panel" id="panel6"></div>
+                    <div class="comic-panel" id="panel7"></div>
+                </div>
+                <p id="error-message" style="display:none;"></p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.getElementById('generate-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const story = document.getElementById('story').value;
+
+            const loader = document.getElementById('loader');
+            const errorMessage = document.getElementById('error-message');
+            const comicPanels = document.querySelectorAll('.comic-panel');
+
+            // Mostrar loader y ocultar otros elementos
+            loader.style.display = 'block';
+            errorMessage.style.display = 'none';
+            comicPanels.forEach(panel => panel.innerHTML = '');
+
+            // Enviar la historia al servidor
+            fetch('/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ story: story }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    errorMessage.style.display = 'block';
+                    errorMessage.innerText = data.error;
+                } else {
+                    data.images.forEach((imageUrl, index) => {
+                        const panel = document.getElementById(`panel${index + 1}`);
+                        panel.innerHTML = `<img src="${imageUrl}" alt="Escena ${index + 1}">`;
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                errorMessage.style.display = 'block';
+                errorMessage.innerText = 'Ocurrió un error inesperado. Inténtalo de nuevo.';
+            })
+            .finally(() => {
+                loader.style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
