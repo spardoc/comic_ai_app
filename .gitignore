@@ -19,3 +19,6 @@ pip-delete-this-directory.txt
 
 # Ignorar imágenes generadas
 /static/*.png
+
+# Ignorar última imágene generada
+/last_image/*.png

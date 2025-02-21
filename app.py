@@ -19,7 +19,9 @@ app = Flask(__name__)
 
 # Carpeta donde se guardarán las imágenes generadas
 IMAGE_FOLDER = 'static'
+LAST_IMAGE_FOLDER = 'last_image'
 os.makedirs(IMAGE_FOLDER, exist_ok=True)
+os.makedirs(LAST_IMAGE_FOLDER, exist_ok=True)
 
 @app.route('/')
 def home():
@@ -28,22 +30,29 @@ def home():
 
 @app.route('/generate', methods=['POST'])
 def generate_comic():
-    """Genera un cómic basado en una historia."""
+    """Genera un cómic basado en 7 prompts."""
     data = request.json
-    story = data.get('story')
+    prompts = data.get('prompts')
 
-    if not story:
-        return jsonify({"error": "Debes proporcionar una historia."}), 400
-
-    # Dividir la historia en 7 partes
-    story_parts = [story[i:i + len(story) // 7] for i in range(0, len(story), len(story) // 7)]
-    if len(story_parts) > 7:
-        story_parts = story_parts[:7]
+    if not prompts or len(prompts) != 7:
+        return jsonify({"error": "Debes proporcionar exactamente 7 prompts."}), 400
 
     image_urls = []
-    for i, part in enumerate(story_parts):
+    last_image_path = None
+
+    for i, prompt in enumerate(prompts):
+        # Verificar si hay una última imagen para usar como referencia
+        reference_image = None
+        if last_image_path and os.path.exists(last_image_path):
+            reference_image = last_image_path
+
         # Llamada a la API de Qwen
-        response = Application.call(app_id=app_id, prompt=f"{part} en estilo cómic")
+        response = Application.call(
+            app_id=app_id,
+            prompt=f"En estilo de cómic genera la siguiente escena: {prompt}",
+            reference_image=reference_image,  # Proporcionar la última imagen como referencia
+            seed=42
+        )
 
         if response.status_code != 200:
             return jsonify({"error": "Error en la API", "message": response.message}), response.status_code
@@ -51,16 +60,19 @@ def generate_comic():
         # Extraer la URL de la imagen
         output_text = response.output.get('text', '')
         match = re.search(r'!\[.*\]\((https?://[^\)]+)\)', output_text)
-
         if match:
             image_url = match.group(1)
             image_path = os.path.join(IMAGE_FOLDER, f'comic_panel_{i + 1}.png')
             img_response = requests.get(image_url)
-
             if img_response.status_code == 200:
                 with open(image_path, 'wb') as f:
                     f.write(img_response.content)
                 image_urls.append(f"/static/comic_panel_{i + 1}.png")
+
+                # Guardar esta imagen como la última generada
+                last_image_path = os.path.join(LAST_IMAGE_FOLDER, 'last_image.png')
+                with open(last_image_path, 'wb') as f:
+                    f.write(img_response.content)
             else:
                 return jsonify({"error": "No se pudo descargar la imagen"}), 500
         else:

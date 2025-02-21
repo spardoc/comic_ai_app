@@ -15,52 +15,56 @@
         </header>
         <main>
             <form id="generate-form">
-                <div class="form-group">
-                    <label for="story">Cuenta tu historia:</label>
-                    <textarea id="story" name="story" placeholder="Describe tu historia completa aquí..." required></textarea>
+                <!-- 7 Paneles con campos de entrada para los prompts -->
+                <div class="comic-strip">
+                    {% for i in range(1, 8) %}
+                    <div class="comic-panel">
+                        <label for="prompt{{ i }}">Prompt para el panel {{ i }}:</label>
+                        <textarea id="prompt{{ i }}" name="prompt{{ i }}" placeholder="Describe la escena {{ i }} aquí..." required></textarea>
+                        <div class="image-container" id="panel{{ i }}"></div>
+                    </div>
+                    {% endfor %}
                 </div>
                 <button type="submit">
                     <span>Generar Cómic</span>
                     <div class="loader" id="loader"></div>
                 </button>
             </form>
-            <div id="result">
-                <div class="comic-strip">
-                    <!-- Aquí se mostrarán las 7 imágenes generadas -->
-                    <div class="comic-panel" id="panel1"></div>
-                    <div class="comic-panel" id="panel2"></div>
-                    <div class="comic-panel" id="panel3"></div>
-                    <div class="comic-panel" id="panel4"></div>
-                    <div class="comic-panel" id="panel5"></div>
-                    <div class="comic-panel" id="panel6"></div>
-                    <div class="comic-panel" id="panel7"></div>
-                </div>
-                <p id="error-message" style="display:none;"></p>
-            </div>
+            <p id="error-message" style="display:none;"></p>
         </main>
     </div>
-
     <script>
         document.getElementById('generate-form').addEventListener('submit', function(event) {
             event.preventDefault();
-            const story = document.getElementById('story').value;
-
             const loader = document.getElementById('loader');
             const errorMessage = document.getElementById('error-message');
-            const comicPanels = document.querySelectorAll('.comic-panel');
+            const comicPanels = document.querySelectorAll('.comic-panel .image-container');
 
             // Mostrar loader y ocultar otros elementos
             loader.style.display = 'block';
             errorMessage.style.display = 'none';
             comicPanels.forEach(panel => panel.innerHTML = '');
 
-            // Enviar la historia al servidor
+            // Recopilar los prompts de los 7 paneles
+            const prompts = [];
+            for (let i = 1; i <= 7; i++) {
+                const prompt = document.getElementById(`prompt${i}`).value;
+                if (!prompt.trim()) {
+                    errorMessage.style.display = 'block';
+                    errorMessage.innerText = `Debes proporcionar un prompt para el panel ${i}.`;
+                    loader.style.display = 'none';
+                    return;
+                }
+                prompts.push(prompt);
+            }
+
+            // Enviar los prompts al servidor
             fetch('/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ story: story }),
+                body: JSON.stringify({ prompts }),
             })
             .then(response => response.json())
             .then(data => {
